@@ -4,7 +4,7 @@
 更新地址：https://raw.githubusercontent.com/Tartarus2014/Script/master/jd_live_redrain2.js
 已支持IOS双京东账号, Node.js支持N个京东账号
 脚本兼容: QuantumultX, Surge, Loon, 小火箭，JSBox, Node.js
-============Quantumultx===============
+============Quantumultx==============
 [task_local]
 #直播间红包雨
 0,1 19-21/1 * * * https://raw.githubusercontent.com/Tartarus2014/Script/master/jd_live_redrain2.js, tag=直播间红包雨, img-url=https://raw.githubusercontent.com/yogayyy/Scripts/master/Icon/shylocks/jd_live_redrain.jpg, enabled=true
