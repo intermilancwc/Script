@@ -1,6 +1,6 @@
 /*
 半点红包雨
-活动时间：大概每天12~23每个半点
+活动时间：大概~每天12~23每个半点
 更新地址：https://raw.githubusercontent.com/Tartarus2014/Script/master/jd_live_redrain_half.js
 已支持IOS双京东账号, Node.js支持N个京东账号
 脚本兼容: QuantumultX, Surge, Loon, 小火箭，JSBox, Node.js
