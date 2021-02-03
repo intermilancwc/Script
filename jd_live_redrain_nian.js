@@ -1,6 +1,6 @@
 /*
 年货直播红包雨
-活动时间：2021年1月20日-2021年1月30日、2月3日、2月5日每天0,9,11,13,15,17,19,20,21,23点可领
+活动时间：大概每天0,9,11,13,15,17,19,20,21,23点可领
 更新地址：https://raw.githubusercontent.com/Tartarus2014/Script/master/jd_live_redrain_nian.js
 已支持IOS双京东账号, Node.js支持N个京东账号
 脚本兼容: QuantumultX, Surge, Loon, 小火箭，JSBox, Node.js
