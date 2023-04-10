@@ -44,13 +44,13 @@ SUPERVISOR_SYSTEMD_FILE_URL="${BASE_URL}/startup/supervisord.systemd"
 
 # 默认参数
 # =======================
-D_LISTEN_PORT=16666
+D_LISTEN_PORT=13800
 D_TARGET_ADDR='127.0.0.1'
 D_TARGET_PORT=9527
-D_KEY="clandlx"
+D_KEY="sn"
 D_CRYPT='none'
 D_MODE='fast3'
-D_MTU=1450
+D_MTU=1380
 D_SNDWND=5120
 D_RCVWND=5120
 D_DATASHARD=50
