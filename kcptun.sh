@@ -24,9 +24,12 @@ INIT_VERSION=3
 
 KCPTUN_INSTALL_DIR='/usr/local/kcptun'
 KCPTUN_LOG_DIR='/var/log/kcptun'
-KCPTUN_RELEASES_URL='https://api.github.com/repos/xtaci/kcptun/releases'
+# 主源使用个人 fork；在 fork 尚未发布 Release 时，临时回退到其父仓库。
+KCPTUN_REPOSITORY='ChangWeiCat/kcptun2026'
+KCPTUN_FALLBACK_REPOSITORY='ossfork/kcptun'
+KCPTUN_RELEASES_URL="https://api.github.com/repos/${KCPTUN_REPOSITORY}/releases"
 KCPTUN_LATEST_RELEASE_URL="${KCPTUN_RELEASES_URL}/latest"
-KCPTUN_TAGS_URL='https://github.com/xtaci/kcptun/tags'
+KCPTUN_TAGS_URL="https://github.com/${KCPTUN_REPOSITORY}/tags"
 
 BASE_URL='https://github.com/kuoruan/shell-scripts/raw/master/kcptun'
 SHELL_VERSION_INFO_URL="${BASE_URL}/version.json"
@@ -44,13 +47,13 @@ SUPERVISOR_SYSTEMD_FILE_URL="${BASE_URL}/startup/supervisord.systemd"
 
 # 默认参数
 # =======================
-D_LISTEN_PORT=13800
+D_LISTEN_PORT=16666
 D_TARGET_ADDR='127.0.0.1'
-D_TARGET_PORT=9527
-D_KEY="sn"
+D_TARGET_PORT=35555
+D_KEY="clandlx"
 D_CRYPT='none'
 D_MODE='fast3'
-D_MTU=1380
+D_MTU=1440
 D_SNDWND=5120
 D_RCVWND=5120
 D_DATASHARD=50
@@ -519,64 +522,99 @@ get_instance_count() {
 get_kcptun_version_info() {
 	local request_version="$1"
 
+	local repository=""
+	local releases_url=""
+	local latest_url=""
+	local json_content=""
 	local version_content=""
-	if [ -n "$request_version" ]; then
-		local json_content=""
-		json_content="$(get_content "$KCPTUN_RELEASES_URL")"
-		local version_selector=".[] | select(.tag_name == \"${request_version}\")"
-		version_content="$(get_json_string "$json_content" "$version_selector")"
-	else
-		version_content="$(get_content "$KCPTUN_LATEST_RELEASE_URL")"
-	fi
+	local version_selector=""
+	local asset_pattern=""
+	local url_selector=""
+	local body_content=""
+	local body=""
+	local file_verify=""
+	local i=""
+	local split=""
 
-	if [ -z "$version_content" ]; then
-		return 1
-	fi
+	kcptun_release_download_url=""
+	kcptun_release_verify=""
+	kcptun_release_tag_name=""
+	kcptun_release_name=""
+	kcptun_release_prerelease=""
+	kcptun_release_publish_time=""
+	kcptun_release_html_url=""
+	kcptun_release_body=""
 
 	if [ -z "$spruce_type" ]; then
 		get_arch
 	fi
 
-	local url_selector=".assets[] | select(.name | contains(\"${spruce_type}\")) | .browser_download_url"
-	kcptun_release_download_url="$(get_json_string "$version_content" "$url_selector")"
+	case "$spruce_type" in
+		linux-amd64)
+			asset_pattern='linux[-_]amd64'
+			;;
+		linux-386)
+			asset_pattern='linux[-_]386'
+			;;
+		*)
+			asset_pattern="$spruce_type"
+			;;
+	esac
 
-	if [ -z "$kcptun_release_download_url" ]; then
-		return 1
-	fi
+	for repository in "$KCPTUN_REPOSITORY" "$KCPTUN_FALLBACK_REPOSITORY"; do
+		[ -z "$repository" ] && continue
 
-	kcptun_release_tag_name="$(get_json_string "$version_content" '.tag_name')"
-	kcptun_release_name="$(get_json_string "$version_content" '.name')"
-	kcptun_release_prerelease="$(get_json_string "$version_content" '.prerelease')"
-	kcptun_release_publish_time="$(get_json_string "$version_content" '.published_at')"
-	kcptun_release_html_url="$(get_json_string "$version_content" '.html_url')"
+		releases_url="https://api.github.com/repos/${repository}/releases"
+		latest_url="${releases_url}/latest"
+		version_content=""
 
-	local body_content="$(get_json_string "$version_content" '.body')"
-	local body="$(echo "$body_content" | sed 's/#br#/\n/g' | grep -vE '(^```)|(^>)|(^[[:space:]]*$)|(SUM$)')"
+		if [ -n "$request_version" ]; then
+			json_content="$(get_content "$releases_url")"
+			version_selector=".[] | select(.tag_name == \"${request_version}\")"
+			version_content="$(get_json_string "$json_content" "$version_selector")"
+		else
+			version_content="$(get_content "$latest_url")"
+		fi
 
-	kcptun_release_body="$(echo "$body" | grep -vE "[0-9a-zA-Z]{32,}")"
+		[ -z "$version_content" ] && continue
 
-	local file_verify=""
-	file_verify="$(echo "$body" | grep "$spruce_type")"
+		url_selector=".assets[] | select(.name | test(\"${asset_pattern}\")) | .browser_download_url"
+		kcptun_release_download_url="$(get_json_string "$version_content" "$url_selector")"
+		[ -z "$kcptun_release_download_url" ] && continue
 
-	if [ -n "$file_verify" ]; then
-		local i="1"
-		local split=""
-		while true
-		do
-			split="$(echo "$file_verify" | cut -d ' ' -f$i)"
+		KCPTUN_RELEASES_URL="$releases_url"
+		KCPTUN_LATEST_RELEASE_URL="$latest_url"
+		KCPTUN_TAGS_URL="https://github.com/${repository}/tags"
+		kcptun_release_tag_name="$(get_json_string "$version_content" '.tag_name')"
+		kcptun_release_name="$(get_json_string "$version_content" '.name')"
+		kcptun_release_prerelease="$(get_json_string "$version_content" '.prerelease')"
+		kcptun_release_publish_time="$(get_json_string "$version_content" '.published_at')"
+		kcptun_release_html_url="$(get_json_string "$version_content" '.html_url')"
 
-			if [ -n "$split" ] && ( echo "$split" | grep -qE "^[0-9a-zA-Z]{32,}$" ); then
-				kcptun_release_verify="$split"
-				break
-			elif [ -z "$split" ]; then
-				break
-			fi
+		body_content="$(get_json_string "$version_content" '.body')"
+		body="$(echo "$body_content" | sed 's/#br#/\n/g' | grep -vE '(^```)|(^>)|(^[[:space:]]*$)|(SUM$)')"
+		kcptun_release_body="$(echo "$body" | grep -vE "[0-9a-zA-Z]{32,}")"
 
-			i=$(expr $i + 1)
-		done
-	fi
+		file_verify="$(echo "$body" | grep -E "$asset_pattern" || true)"
+		if [ -n "$file_verify" ]; then
+			i="1"
+			while true
+			do
+				split="$(echo "$file_verify" | cut -d ' ' -f$i)"
+				if [ -n "$split" ] && ( echo "$split" | grep -qE "^[0-9a-zA-Z]{32,}$" ); then
+					kcptun_release_verify="$split"
+					break
+				elif [ -z "$split" ]; then
+					break
+				fi
+				i=$(expr "$i" + 1)
+			done
+		fi
 
-	return 0
+		return 0
+	done
+
+	return 1
 }
 
 # 获取脚本版本信息
@@ -627,6 +665,14 @@ install_kcptun() {
 
 	local kcptun_file_name="kcptun-${kcptun_release_tag_name}.tar.gz"
 	download_file "$kcptun_release_download_url" "$kcptun_file_name" "$kcptun_release_verify"
+	if ! tar -tzf "$kcptun_file_name" >/dev/null 2>&1; then
+		cat >&2 <<-'EOF'
+		Kcptun 下载文件不是有效的 tar.gz 压缩包，已停止安装。
+		请检查当前 Release 资产或服务器到 GitHub 的网络连接。
+		EOF
+		rm -f "$kcptun_file_name"
+		exit 1
+	fi
 
 	if [ ! -d "$KCPTUN_INSTALL_DIR" ]; then
 		(
@@ -643,11 +689,13 @@ install_kcptun() {
 		)
 	fi
 
-	(
-		set -x
-		tar -zxf "$kcptun_file_name" -C "$KCPTUN_INSTALL_DIR"
-		sleep 3
-	)
+	if ! tar -zxf "$kcptun_file_name" -C "$KCPTUN_INSTALL_DIR"; then
+		cat >&2 <<-'EOF'
+		Kcptun 压缩包解压失败，已停止安装。
+		EOF
+		rm -f "$kcptun_file_name"
+		exit 1
+	fi
 
 	local kcptun_server_file=""
 	kcptun_server_file="$(get_kcptun_server_file)"
